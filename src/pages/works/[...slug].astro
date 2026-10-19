@@ -5,7 +5,7 @@ import WorkLayout from '../../layouts/WorkLayout.astro';
 export async function getStaticPaths() {
   const works = await getCollection('works');
   return works.map((work) => {
-    // Normalise slug: "edge-face-recognition/index.mdx" -> "edge-face-recognition"
+    // Normalise "<work-slug>/index.mdx" to "<work-slug>".
     const slug = work.id
       .replace(/\/index\.(md|mdx)$/, '')
       .replace(/\.(md|mdx)$/, '')

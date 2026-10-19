@@ -8,8 +8,7 @@ interface Props {
 
 const { work } = Astro.props;
 const baseUrl = import.meta.env.BASE_URL;
-// slug in glob loader: work.id contains the slug or subpath
-// e.g. "edge-face-recognition/index.mdx" -> slug is "edge-face-recognition"
+// The glob loader id contains the work slug and optional index filename.
 const workSlug = work.id.replace(/\/index\.(md|mdx)$/, '').replace(/\.(md|mdx)$/, '');
 const workUrl = `${baseUrl}works/${workSlug}/`;
 
