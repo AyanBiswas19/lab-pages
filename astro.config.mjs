@@ -9,6 +9,14 @@ import { fileURLToPath } from 'node:url';
 
 const isCI = Boolean(process.env.CI);
 const repoName = process.env.GITHUB_REPOSITORY ? process.env.GITHUB_REPOSITORY.split('/')[1] : '';
+const workAssetExtensions = new Set([
+  '.pdf', '.html', '.png', '.jpg', '.jpeg', '.gif', '.webp', '.svg', '.mp4', '.webm', '.mp3', '.wav',
+]);
+
+function isWithinDirectory(root, candidate) {
+  const relative = path.relative(root, candidate);
+  return relative === '' || (relative !== '..' && !relative.startsWith(`..${path.sep}`) && !path.isAbsolute(relative));
+}
 
 /**
  * Astro integration to copy co-located non-md/mdx artefacts (.pdf, .html, etc.)
@@ -26,7 +34,18 @@ function copyWorkArtefacts() {
         fs.mkdirSync(targetDir, { recursive: true });
         fs.cpSync(srcWorks, targetDir, {
           recursive: true,
-          filter: (src) => !src.endsWith('.md') && !src.endsWith('.mdx'),
+          filter: (src) => {
+            const relative = path.relative(srcWorks, src);
+            if (
+              !isWithinDirectory(srcWorks, src) ||
+              (relative !== '' && relative.split(path.sep).some((part) => part.startsWith('.')))
+            ) {
+              return false;
+            }
+            const stats = fs.lstatSync(src);
+            if (stats.isSymbolicLink()) return false;
+            return stats.isDirectory() || (stats.isFile() && workAssetExtensions.has(path.extname(src).toLowerCase()));
+          },
         });
       },
       'astro:server:setup': ({ server }) => {
@@ -37,16 +56,29 @@ function copyWorkArtefacts() {
           const match = cleanUrl.match(/(?:^|\/)works\/(.+)$/);
           if (!match) return next();
 
-          const assetPath = match[1];
-          const filePath = path.resolve('src/content/works', assetPath);
+          let assetPath;
+          try {
+            assetPath = decodeURIComponent(match[1]);
+          } catch {
+            return next();
+          }
 
-          if (
-            fs.existsSync(filePath) &&
-            fs.statSync(filePath).isFile() &&
-            !filePath.endsWith('.md') &&
-            !filePath.endsWith('.mdx')
-          ) {
-            return fs.createReadStream(filePath).pipe(res);
+          const srcWorks = path.resolve('src/content/works');
+          const filePath = path.resolve(srcWorks, assetPath);
+          if (!isWithinDirectory(srcWorks, filePath)) return next();
+
+          try {
+            const realRoot = fs.realpathSync(srcWorks);
+            const realFile = fs.realpathSync(filePath);
+            if (
+              isWithinDirectory(realRoot, realFile) &&
+              fs.statSync(realFile).isFile() &&
+              workAssetExtensions.has(path.extname(realFile).toLowerCase())
+            ) {
+              return fs.createReadStream(realFile).pipe(res);
+            }
+          } catch {
+            return next();
           }
           next();
         });
