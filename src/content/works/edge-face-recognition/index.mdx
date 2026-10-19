@@ -1,0 +1,203 @@
+---
+title: "Characterizing Face Recognition for Resource Efficient Deployment on Edge"
+description: "An architecture-aware framework for predicting CNN inference throughput on edge devices, with analysis of Face Recognition and Anti-Spoofing deployment trade-offs."
+date: 2023-10-02
+venue: "ICCVW 2023"
+authors:
+  - name: "Ayan Biswas"
+    affiliation: "1"
+  - name: "Sai Amrit Patnaik"
+    affiliation: "1"
+  - name: "A. H. Abdul Hafez"
+    affiliation: "2"
+  - name: "Anoop M. Namboodiri"
+    affiliation: "1"
+affiliations:
+  - id: "1"
+    name: "Center for Visual Information Technology (CVIT), IIIT Hyderabad"
+  - id: "2"
+    name: "Hasan Kalyoncu University, Turkey"
+links:
+  - label: "Paper (PDF)"
+    url: "https://openaccess.thecvf.com/content/ICCV2023W/RCV/papers/Biswas_Characterizing_Face_Recognition_for_Resource_Efficient_Deployment_on_Edge_ICCVW_2023_paper.pdf"
+    icon: "📄"
+  - label: "Code"
+    url: "https://github.com/AyanBiswas19/Resource_Efficient_FR"
+    icon: "💻"
+bibtex: |
+  @inproceedings{biswas2023characterizing,
+    title={Characterizing Face Recognition for Resource Efficient Deployment on Edge},
+    author={Biswas, Ayan and Patnaik, Sai Amrit and Hafez, AH and Namboodiri, Anoop M},
+    booktitle={Proceedings of the IEEE/CVF International Conference on Computer Vision},
+    pages={1312--1321},
+    year={2023}
+  }
+featured: true
+tags: ["face-recognition", "edge-deployment", "throughput-estimation", "anti-spoofing"]
+---
+
+import Figure from '../../../components/Figure.astro';
+
+## Abstract
+
+Deployment of Face Recognition (FR) systems on the edge has seen significant growth due to advancements in hardware design and efficient neural architectures. However, tailoring state-of-the-art FR solutions to a specific edge device remains challenging and vastly unexplored. Although benchmark data is available for some combinations of model, device, and framework, it is neither comprehensive nor scalable.
+
+We propose an analytical framework to characterize the relationship between a model's architecture and its inference throughput on edge, enabling practitioners to predict deployment performance from a small number of empirical measurements — without exhaustive physical benchmarking. We complement this with an analysis of Face Anti-Spoofing (FAS) deployability trade-offs and empirical experiments on resolution scaling, FP16 precision, and accuracy–throughput balance.
+
+---
+
+## The Problem: FR on Edge
+
+<Figure
+  src="./assets/fr-research-landscape.png"
+  alt="FR research landscape showing most innovation is in loss functions, data, and training — not architecture."
+  caption="Most FR research focuses on loss functions, training strategy, and data. The underlying backbone architecture is treated as a blackbox."
+  label="Figure 1:"
+/>
+
+State-of-the-art FR literature overwhelmingly innovates on **loss functions** (ArcFace, AdaFace, ElasticFace), **training strategy**, and **data** — while the backbone model remains a fixed abstraction, almost always a ResNet variant. This matters for edge deployment because:
+
+- **Existing backbones aren't edge-efficient.** ResNets were designed for server-class systems with ample compute and memory.
+- **Exhaustive benchmarking is infeasible.** The combinatorial space of devices × firmware × models × input resolutions is too large.
+- **FLOPs alone are insufficient.** Common compute proxies like FLOPs or MACs fail to capture real-world throughput governed by memory bandwidth, pipeline overhead, and runtime behavior.
+
+Our work addresses this gap: given a model's **architecture family** and **parameter count**, can we predict its inference throughput on a specific edge device?
+
+---
+
+## Architecture-Aware Throughput Estimation
+
+### Setup
+
+All experiments run on an **NVIDIA Jetson Nano** — a 5–10 W entry-level edge device with a 128-core Maxwell GPU and 4 GB shared CPU/GPU memory. Models are converted from PyTorch to TensorRT (FP32 and FP16) via `torch2trt`, with no manual tuning.
+
+<Figure
+  src="./assets/jetson-nano-setup.png"
+  alt="Jetson Nano deployment setup and conversion pipeline."
+  caption="Deployment pipeline: PyTorch → TensorRT via torch2trt. The Jetson Nano's shared memory and tight power budget expose real deployment constraints."
+  label="Figure 2:"
+/>
+
+### Key Insight
+
+When throughput is plotted against parameter count (log scale), models **cluster by architecture family**. A naive global regression has large error, but fitting **per-family** curves yields accurate predictions.
+
+<Figure
+  src="./assets/architecture-aware-fit.png"
+  alt="Scatter plot of throughput vs parameters, colored by architecture family, showing distinct per-family trends."
+  caption="Throughput (FPS) vs. parameters on a log scale. Each color is an architecture family (ResNet, MobileNetV2, ShuffleNet, MnasNet, DenseNet). Per-family fits are far more accurate than a single global fit."
+  label="Figure 3:"
+/>
+
+### Formulation
+
+We define a set of **Landmarks** $\mathcal{L}$ — sparse empirical measurements on a specific device:
+
+$$
+\mathcal{L} = \{(m, \mathcal{T}_0)\}, \quad m = (\mathcal{A}, \mathcal{P})
+$$
+
+where $\mathcal{A}$ is the architecture family and $\mathcal{P}$ is the parameter count. The estimator fits a quadratic in $1/\mathcal{P}$ **within each family**:
+
+$$
+Z_{\mathcal{L}}(\mathcal{A}, \mathcal{P}) = \frac{C_1}{\mathcal{P}^2} + \frac{C_2}{\mathcal{P}} + I
+$$
+
+where $C_1$, $C_2$, and $I$ are architecture-specific regression coefficients.
+
+### Validation
+
+On held-out model variants (unseen MobileNetV2 width multipliers, unseen ResNet depths):
+
+| Family | Test MAE (FPS) | Test RMSE (FPS) |
+|--------|---------------|-----------------|
+| MobileNetV2 | 3.47 | 4.47 |
+| ResNet | 2.24 | 3.08 |
+
+These errors are **within on-device observational noise** — 84% lower MAE than the naive global fit.
+
+<Figure
+  src="./assets/claimed-vs-observed.png"
+  alt="Claimed vs observed throughput and speed-up ratios across runtimes."
+  caption="Observed vs. manufacturer-claimed throughput. PyTorch achieves ~70% of claimed; TRT-FP16 is closer but more volatile. DenseNet201 drops to 45% due to memory pressure."
+  label="Figure 4:"
+/>
+
+---
+
+## Anti-Spoofing on Edge
+
+Face Anti-Spoofing (FAS) models act as a serial gatekeeper in the FR pipeline — they must run **before** recognition. On edge, this adds latency directly. Unlike FR backbones, FAS models use **handcrafted, task-specific architectures** with non-standard operations (e.g., Central Difference Convolution).
+
+<Figure
+  src="./assets/fas-pipeline.png"
+  alt="Interaction between Face Recognition and Face Anti-Spoofing systems in a deployment pipeline."
+  caption="A depiction of the interaction between FR and FAS systems. FAS acts as a serial gatekeeper — its latency adds directly to the pipeline."
+  label="Figure 5:"
+/>
+
+### Throughput vs. Error-Rate
+
+| Model | Throughput (FPS) | Params (M) | HTER | ACER |
+|-------|-----------------|------------|------|------|
+| FeatherNetA | 213.5‡ | 0.35 | — | — |
+| FeatherNetB | 187.9‡ | 0.35 | — | — |
+| CDCN\* | 2.5‡ | 2.25 | — | 1.0 |
+| CDCNpp\* | 2.3‡ | 2.26 | — | 0.2 |
+| DC-CDN\* | 1.2‡ | 2.50 | 18.82 | 0.4 |
+| DBMNet | 31.8† | 12.44 | 17.59 | — |
+| SSAN-M | 2.5† | 8.79 | 19.51 | — |
+| **SSAN-R** | **42.8†** | **8.14** | **13.72** | — |
+| HFN\* | 12.5† | 62.12 | 12.4 | — |
+
+<small>† FP16 &nbsp; ‡ FP32 &nbsp; \* approximated (model did not fully execute on TensorRT)</small>
+
+**Key finding:** SSAN-R achieves the best throughput–error balance for edge (42.8 FPS, HTER 13.72). Models with non-standard operations (CDC family) achieve only 1–2.5 FPS despite having few parameters — **theoretical efficiency ≠ deployable efficiency**.
+
+---
+
+## Empirical Findings
+
+### Resolution Scaling
+
+<Figure
+  src="./assets/throughput-vs-resolution.png"
+  alt="Throughput vs input resolution on log scale, showing steeper-than-hyperbolic decay."
+  caption="Throughput (log) vs. resolution. Decay is steeper than hyperbolic at high resolutions and clamps at low resolutions — fixed system overhead dominates when per-inference compute is small."
+  label="Figure 6:"
+/>
+
+### FP16 Precision
+
+<Figure
+  src="./assets/fp16-speedup.png"
+  alt="FP16/FP32 speed-up ratio vs absolute FP16 throughput."
+  caption="FP16/FP32 speed-up. Heavy models (ResNets) approach 2×. Lightweight models (MobileNetV2, ShuffleNet) see S ≈ 1 — they are already pipeline-bound, not compute-bound."
+  label="Figure 7:"
+/>
+
+### Accuracy vs. Throughput
+
+<Figure
+  src="./assets/accuracy-vs-throughput.png"
+  alt="ImageNet Top-1 accuracy vs edge throughput and parameters."
+  caption="ImageNet Top-1 vs. throughput and parameters. ResNet50 is the only edge-viable backbone above 80% accuracy. ShuffleNetV2 offers the best accuracy per unit of throughput. DenseNets have great accuracy/param but high memory bandwidth — avoid on tight-memory edge."
+  label="Figure 8:"
+/>
+
+---
+
+## Contributions
+
+This work advances the deployment of Face Recognition (FR) and Face Anti-Spoofing (FAS) models on resource-constrained edge devices through three contributions:
+
+1. **Structural characterization of FR architectures and their edge inference behavior.** An analysis of state-of-the-art FR models shows that the design space can be organized into a small number of backbone families. This structure supports systematic comparison of model architectures and an empirical mapping from each family to its observed inference performance under real deployment constraints.
+2. **Explainable throughput estimation from sparse measurements.** Building on that architectural grouping, the proposed framework predicts CNN inference throughput from a limited set of on-device measurements. Family-specific estimates make performance exploration more scalable than exhaustive benchmarking, while retaining an interpretable relationship between model architecture and throughput. Although evaluated here with FR backbones, the method is applicable to a broader range of architectures and deployment settings where representative measurements are available.
+3. **Analysis of accuracy, error rate, and runtime trade-offs under edge constraints.** The FAS evaluation relates throughput to error rates and identifies specialized operations that execute inefficiently in runtimes such as TensorRT. Complementary FR experiments characterize accuracy–throughput trade-offs and show how resolution, precision, memory bandwidth, and pipeline overhead shape practical performance beyond what parameter count or FLOPs alone predict.
+
+---
+
+## Resources & Code
+
+- Source code, benchmarking scripts, and deployment utilities: [AyanBiswas19/Resource_Efficient_FR](https://github.com/AyanBiswas19/Resource_Efficient_FR)
+- Camera-ready PDF: [download from CVF Open Access](https://openaccess.thecvf.com/content/ICCV2023W/RCV/papers/Biswas_Characterizing_Face_Recognition_for_Resource_Efficient_Deployment_on_Edge_ICCVW_2023_paper.pdf)
