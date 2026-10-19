@@ -1,0 +1,71 @@
+---
+import BaseLayout from './BaseLayout.astro';
+import ProjectHeader from '../components/ProjectHeader.astro';
+import BibtexBlock from '../components/BibtexBlock.astro';
+import type { CollectionEntry } from 'astro:content';
+
+interface Props {
+  work: CollectionEntry<'works'>;
+}
+
+const { work } = Astro.props;
+const data = work.data;
+---
+
+<BaseLayout title={`${data.title} — Anoop Lab`} description={data.description}>
+  <article class="work-article">
+    <ProjectHeader
+      title={data.title}
+      venue={data.venue}
+      authors={data.authors}
+      affiliations={data.affiliations}
+      links={data.links}
+    />
+
+    {
+      data.teaser && (
+        <figure class="paper-hero-teaser">
+          <img
+            src={data.teaser.src || data.teaser}
+            alt={data.teaserAlt || data.title}
+            class="hero-image"
+          />
+          {data.teaserAlt && <figcaption class="hero-caption">{data.teaserAlt}</figcaption>}
+        </figure>
+      )
+    }
+
+    <div class="prose">
+      <slot />
+    </div>
+
+    {data.bibtex && <BibtexBlock bibtex={data.bibtex} />}
+  </article>
+</BaseLayout>
+
+<style>
+  .work-article {
+    max-width: 860px;
+    margin: 0 auto;
+  }
+
+  .paper-hero-teaser {
+    margin: 0 0 2.5rem;
+    text-align: center;
+  }
+
+  .hero-image {
+    max-width: 100%;
+    height: auto;
+    border-radius: 8px;
+    border: 1px solid var(--color-border);
+  }
+
+  .hero-caption {
+    font-size: 0.9rem;
+    color: var(--color-text-muted);
+    margin-top: 0.75rem;
+    line-height: 1.5;
+    text-align: left;
+  }
+</style>

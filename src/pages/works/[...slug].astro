@@ -1,0 +1,27 @@
+---
+import { getCollection, render } from 'astro:content';
+import WorkLayout from '../../layouts/WorkLayout.astro';
+
+export async function getStaticPaths() {
+  const works = await getCollection('works');
+  return works.map((work) => {
+    // Normalise slug: "edge-face-recognition/index.mdx" -> "edge-face-recognition"
+    const slug = work.id
+      .replace(/\/index\.(md|mdx)$/, '')
+      .replace(/\.(md|mdx)$/, '')
+      .replace(/\/index$/, '');
+
+    return {
+      params: { slug },
+      props: { work },
+    };
+  });
+}
+
+const { work } = Astro.props;
+const { Content } = await render(work);
+---
+
+<WorkLayout work={work}>
+  <Content />
+</WorkLayout>

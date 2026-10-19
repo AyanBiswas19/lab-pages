@@ -1,0 +1,91 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Edge Face Recognition Explorer</title>
+  <style>
+    body {
+      font-family: system-ui, -apple-system, sans-serif;
+      margin: 0;
+      padding: 1.5rem;
+      background: #0f172a;
+      color: #f8fafc;
+      text-align: center;
+    }
+    .container {
+      max-width: 600px;
+      margin: 0 auto;
+    }
+    h2 {
+      margin-top: 0;
+      color: #38bdf8;
+    }
+    .metric-card {
+      background: #1e293b;
+      border: 1px solid #334155;
+      border-radius: 8px;
+      padding: 1.25rem;
+      margin: 1rem 0;
+      text-align: left;
+    }
+    .metric-row {
+      display: flex;
+      justify-content: space-between;
+      margin: 0.5rem 0;
+      font-size: 0.95rem;
+    }
+    .val {
+      font-weight: 700;
+      color: #4ade80;
+    }
+    select {
+      background: #334155;
+      color: #f8fafc;
+      border: 1px solid #475569;
+      padding: 0.5rem 1rem;
+      border-radius: 6px;
+      font-size: 1rem;
+      margin-bottom: 1rem;
+      cursor: pointer;
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <h2>⚡ Edge Face Recognition Latency Explorer</h2>
+    <p>Select a target hardware platform to view measured inference metrics:</p>
+    
+    <select id="deviceSelect" onchange="updateMetrics()">
+      <option value="rpi4">Raspberry Pi 4 (Quad-Core Cortex-A72)</option>
+      <option value="jetson_nano">NVIDIA Jetson Nano (128-core Maxwell)</option>
+      <option value="coral">Google Coral Dev Board (Edge TPU)</option>
+    </select>
+
+    <div class="metric-card">
+      <div class="metric-row"><span>Framework:</span><span id="framework" class="val">TFLite (INT8)</span></div>
+      <div class="metric-row"><span>Inference Latency:</span><span id="latency" class="val">42.4 ms</span></div>
+      <div class="metric-row"><span>FPS:</span><span id="fps" class="val">23.6 FPS</span></div>
+      <div class="metric-row"><span>Peak Memory:</span><span id="memory" class="val">184 MB</span></div>
+      <div class="metric-row"><span>Accuracy (LFW):</span><span id="accuracy" class="val">99.2%</span></div>
+    </div>
+  </div>
+
+  <script>
+    const data = {
+      rpi4: { framework: 'TFLite (INT8)', latency: '42.4 ms', fps: '23.6 FPS', memory: '184 MB', accuracy: '99.2%' },
+      jetson_nano: { framework: 'TensorRT (FP16)', latency: '16.8 ms', fps: '59.5 FPS', memory: '210 MB', accuracy: '99.5%' },
+      coral: { framework: 'EdgeTPU Compiler', latency: '8.2 ms', fps: '121.9 FPS', memory: '120 MB', accuracy: '99.1%' }
+    };
+    function updateMetrics() {
+      const dev = document.getElementById('deviceSelect').value;
+      const m = data[dev];
+      document.getElementById('framework').textContent = m.framework;
+      document.getElementById('latency').textContent = m.latency;
+      document.getElementById('fps').textContent = m.fps;
+      document.getElementById('memory').textContent = m.memory;
+      document.getElementById('accuracy').textContent = m.accuracy;
+    }
+  </script>
+</body>
+</html>

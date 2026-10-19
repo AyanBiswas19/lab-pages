@@ -1,0 +1,155 @@
+---
+import type { CollectionEntry } from 'astro:content';
+import ActionButton from './ActionButton.astro';
+
+interface Props {
+  work: CollectionEntry<'works'>;
+}
+
+const { work } = Astro.props;
+const baseUrl = import.meta.env.BASE_URL;
+// slug in glob loader: work.id contains the slug or subpath
+// e.g. "edge-face-recognition/index.mdx" -> slug is "edge-face-recognition"
+const workSlug = work.id.replace(/\/index\.(md|mdx)$/, '').replace(/\.(md|mdx)$/, '');
+const workUrl = `${baseUrl}works/${workSlug}/`;
+
+const authorsText = work.data.authors.map((a) => a.name).join(', ');
+const year = new Date(work.data.date).getFullYear();
+---
+
+<article class="work-card">
+  {
+    work.data.teaser && (
+      <a href={workUrl} class="card-teaser-link">
+        <img
+          src={work.data.teaser.src || work.data.teaser}
+          alt={work.data.teaserAlt || work.data.title}
+          class="card-teaser"
+          loading="lazy"
+        />
+      </a>
+    )
+  }
+  <div class="card-body">
+    <div class="card-meta">
+      <span class="badge">{work.data.venue}</span>
+      <span class="card-year">{year}</span>
+    </div>
+
+    <h2 class="card-title">
+      <a href={workUrl}>{work.data.title}</a>
+    </h2>
+
+    <p class="card-authors">{authorsText}</p>
+
+    <p class="card-desc">{work.data.description}</p>
+
+    {
+      work.data.links && work.data.links.length > 0 && (
+        <div class="card-links">
+          {work.data.links.slice(0, 4).map((link) => (
+            <ActionButton
+              label={link.label}
+              url={link.url.startsWith('./') ? `${workUrl}${link.url.replace('./', '')}` : link.url}
+              icon={link.icon}
+            />
+          ))}
+        </div>
+      )
+    }
+  </div>
+</article>
+
+<style>
+  .work-card {
+    border: 1px solid var(--color-card-border);
+    border-radius: 10px;
+    background-color: var(--color-surface);
+    overflow: hidden;
+    display: flex;
+    flex-direction: column;
+    transition: transform 0.15s ease, box-shadow 0.15s ease, border-color 0.15s ease;
+  }
+
+  .work-card:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.05);
+    border-color: var(--color-primary);
+  }
+
+  .card-teaser-link {
+    display: block;
+    aspect-ratio: 16 / 9;
+    overflow: hidden;
+    background-color: var(--color-border);
+  }
+
+  .card-teaser {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    display: block;
+    transition: transform 0.2s ease;
+  }
+
+  .work-card:hover .card-teaser {
+    transform: scale(1.02);
+  }
+
+  .card-body {
+    padding: 1.25rem;
+    display: flex;
+    flex-direction: column;
+    flex: 1;
+  }
+
+  .card-meta {
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+    margin-bottom: 0.75rem;
+  }
+
+  .card-year {
+    font-size: 0.85rem;
+    font-weight: 500;
+    color: var(--color-text-muted);
+  }
+
+  .card-title {
+    font-size: 1.25rem;
+    font-weight: 700;
+    line-height: 1.35;
+    margin-bottom: 0.5rem;
+  }
+
+  .card-title a {
+    color: var(--color-text);
+  }
+
+  .card-title a:hover {
+    color: var(--color-primary);
+    text-decoration: none;
+  }
+
+  .card-authors {
+    font-size: 0.9rem;
+    color: var(--color-text-muted);
+    margin-bottom: 0.75rem;
+  }
+
+  .card-desc {
+    font-size: 0.9rem;
+    line-height: 1.5;
+    color: var(--color-text);
+    margin-bottom: 1.25rem;
+    flex: 1;
+  }
+
+  .card-links {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.4rem;
+    margin-top: auto;
+  }
+</style>

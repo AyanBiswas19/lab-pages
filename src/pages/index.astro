@@ -1,0 +1,107 @@
+---
+import BaseLayout from '../layouts/BaseLayout.astro';
+import WorkCard from '../components/WorkCard.astro';
+import { getCollection } from 'astro:content';
+
+const allWorks = await getCollection('works');
+// Sort chronologically (newest first)
+const sortedWorks = allWorks.sort(
+  (a, b) => new Date(b.data.date).getTime() - new Date(a.data.date).getTime()
+);
+
+const featuredWorks = sortedWorks.filter((w) => w.data.featured);
+const otherWorks = sortedWorks.filter((w) => !w.data.featured);
+---
+
+<BaseLayout
+  title="Anoop Lab — Computer Vision & Edge AI Research"
+  description="Publications, project pages, and research artefacts from Anoop Lab at IIIT Hyderabad."
+>
+  <section class="lab-hero">
+    <h1 class="hero-title">Anoop Lab</h1>
+    <p class="hero-tagline">
+      Computer Vision, Edge AI, Biometrics, and Resource-Efficient Deep Learning.
+    </p>
+    <p class="hero-description">
+      We build lightweight, scalable algorithms and architectures that bring state-of-the-art
+      perception models to resource-constrained edge devices and real-world embedded systems.
+    </p>
+  </section>
+
+  {
+    featuredWorks.length > 0 && (
+      <section class="works-section">
+        <h2 class="section-title">Featured Research</h2>
+        <div class="works-grid">
+          {featuredWorks.map((work) => (
+            <WorkCard work={work} />
+          ))}
+        </div>
+      </section>
+    )
+  }
+
+  <section class="works-section">
+    <h2 class="section-title">Publications & Projects</h2>
+    {
+      sortedWorks.length > 0 ? (
+        <div class="works-grid">
+          {(featuredWorks.length > 0 ? otherWorks : sortedWorks).map((work) => (
+            <WorkCard work={work} />
+          ))}
+        </div>
+      ) : (
+        <p class="empty-state">No research works published yet.</p>
+      )
+    }
+  </section>
+</BaseLayout>
+
+<style>
+  .lab-hero {
+    padding: 3rem 0 2.5rem;
+    border-bottom: 1px solid var(--color-border);
+    margin-bottom: 2.5rem;
+  }
+
+  .hero-title {
+    font-size: 2.5rem;
+    font-weight: 800;
+    color: var(--color-text);
+    margin-bottom: 0.5rem;
+  }
+
+  .hero-tagline {
+    font-size: 1.25rem;
+    font-weight: 500;
+    color: var(--color-primary);
+    margin-bottom: 1rem;
+  }
+
+  .hero-description {
+    font-size: 1.05rem;
+    line-height: 1.6;
+    color: var(--color-text-muted);
+    max-width: 720px;
+  }
+
+  .works-section {
+    margin-bottom: 3.5rem;
+  }
+
+  .section-title {
+    font-size: 1.5rem;
+    font-weight: 700;
+    color: var(--color-text);
+    margin-bottom: 1.25rem;
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+  }
+
+  .empty-state {
+    color: var(--color-text-muted);
+    font-style: italic;
+    padding: 2rem 0;
+  }
+</style>

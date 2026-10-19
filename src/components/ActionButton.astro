@@ -1,0 +1,36 @@
+---
+interface Props {
+  label: string;
+  url: string;
+  icon?: string;
+}
+
+const { label, url, icon } = Astro.props;
+
+// Auto-select icon if not explicitly provided
+function getDefaultIcon(label: string): string {
+  const l = label.toLowerCase();
+  if (l.includes('pdf') || l.includes('paper')) return '📄';
+  if (l.includes('arxiv')) return '📑';
+  if (l.includes('code') || l.includes('github')) return '💻';
+  if (l.includes('dataset') || l.includes('data')) return '💾';
+  if (l.includes('video') || l.includes('talk')) return '🎥';
+  if (l.includes('demo') || l.includes('viewer')) return '🚀';
+  if (l.includes('poster')) return '🖼️';
+  if (l.includes('slides')) return '📊';
+  return '🔗';
+}
+
+const displayIcon = icon || getDefaultIcon(label);
+const isExternal = url.startsWith('http://') || url.startsWith('https://');
+---
+
+<a
+  href={url}
+  class="action-btn"
+  target={isExternal ? '_blank' : undefined}
+  rel={isExternal ? 'noopener noreferrer' : undefined}
+>
+  <span class="btn-icon">{displayIcon}</span>
+  <span class="btn-label">{label}</span>
+</a>

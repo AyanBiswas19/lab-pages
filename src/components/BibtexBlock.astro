@@ -1,0 +1,122 @@
+---
+interface Props {
+  bibtex: string;
+}
+
+const { bibtex } = Astro.props;
+---
+
+<div class="bibtex-container">
+  <div class="bibtex-header">
+    <span class="bibtex-label">BibTeX Citation</span>
+    <button class="copy-bibtex-btn" type="button" aria-label="Copy BibTeX to clipboard">
+      <span class="copy-icon">📋</span>
+      <span class="copy-text">Copy</span>
+    </button>
+  </div>
+  <pre class="bibtex-pre"><code>{bibtex.trim()}</code></pre>
+</div>
+
+<script>
+  function setupBibtexCopy() {
+    const containers = document.querySelectorAll('.bibtex-container');
+    containers.forEach((container) => {
+      const btn = container.querySelector('.copy-bibtex-btn');
+      const code = container.querySelector('code');
+      if (!btn || !code) return;
+
+      btn.addEventListener('click', async () => {
+        try {
+          await navigator.clipboard.writeText(code.innerText);
+          const textSpan = btn.querySelector('.copy-text');
+          if (textSpan) {
+            const original = textSpan.textContent;
+            textSpan.textContent = 'Copied!';
+            btn.classList.add('copied');
+            setTimeout(() => {
+              textSpan.textContent = original;
+              btn.classList.remove('copied');
+            }, 2000);
+          }
+        } catch (err) {
+          console.error('Failed to copy BibTeX:', err);
+        }
+      });
+    });
+  }
+
+  // Setup on page load and view transitions
+  setupBibtexCopy();
+  document.addEventListener('astro:page-load', setupBibtexCopy);
+</script>
+
+<style>
+  .bibtex-container {
+    margin: 2.5rem 0;
+    border: 1px solid var(--color-border);
+    border-radius: 8px;
+    background-color: var(--color-surface);
+    overflow: hidden;
+  }
+
+  .bibtex-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 0.6rem 1rem;
+    border-bottom: 1px solid var(--color-border);
+    background-color: var(--color-surface-hover);
+  }
+
+  .bibtex-label {
+    font-size: 0.85rem;
+    font-weight: 600;
+    color: var(--color-text-muted);
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+  }
+
+  .copy-bibtex-btn {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.35rem;
+    padding: 0.25rem 0.65rem;
+    font-size: 0.8rem;
+    font-weight: 500;
+    border-radius: 4px;
+    border: 1px solid var(--color-border);
+    background-color: var(--color-bg);
+    color: var(--color-text);
+    cursor: pointer;
+    transition: all 0.15s ease;
+  }
+
+  .copy-bibtex-btn:hover {
+    border-color: var(--color-primary);
+    color: var(--color-primary);
+  }
+
+  .copy-bibtex-btn.copied {
+    background-color: #dcfce7;
+    color: #15803d;
+    border-color: #86efac;
+  }
+
+  @media (prefers-color-scheme: dark) {
+    .copy-bibtex-btn.copied {
+      background-color: #064e3b;
+      color: #6ee7b7;
+      border-color: #047857;
+    }
+  }
+
+  .bibtex-pre {
+    margin: 0 !important;
+    padding: 1rem !important;
+    border: none !important;
+    border-radius: 0 !important;
+    background-color: transparent !important;
+    font-size: 0.85rem !important;
+    overflow-x: auto;
+  }
+</style>
